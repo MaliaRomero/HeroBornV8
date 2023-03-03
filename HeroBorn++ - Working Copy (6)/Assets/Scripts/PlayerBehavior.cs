@@ -22,7 +22,10 @@ public class PlayerBehavior : MonoBehaviour
     private Rigidbody _rb;
     private CapsuleCollider _col;
 
-    // private bool DoJump = false;  Slease's solution for jumping
+    public delegate void JumpingEvent();
+    public event JumpingEvent playerJump;
+
+    // private bool DoJump = false;
     //private bool DoShoot = false;
 
     void Start()
@@ -55,6 +58,8 @@ public class PlayerBehavior : MonoBehaviour
         {
             _rb.AddForce(Vector3.up * jumpVelocity, ForceMode.Impulse);
         }
+
+        playerJump();
 
         if (Input.GetKeyDown(KeyCode.Space))
         {

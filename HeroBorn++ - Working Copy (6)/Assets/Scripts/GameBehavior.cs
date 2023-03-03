@@ -2,16 +2,26 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using CustomExtensions;
 
-public class GameBehavior : MonoBehaviour
+public class GameBehavior : MonoBehaviour, IManager
 {
     public string labelText = "Collect all 4 items and win your freedom!";
     public int maxItems = 4;
-
+    public Stack<string> lootStack = new Stack<string>();
     public bool showWinScreen = false;
     public bool showLossScreen = false;
-
     private int _itemsCollected = 0;
+    private string _state;
+    public delegate void DebugDelegate(string newText);
+    public DebugDelegate debug = Print;
+
+    public string State
+    {
+        get { return _state; }
+        set { _state = value; } 
+    }
+
     public int Items
     {
         get { return _itemsCollected; }
@@ -51,12 +61,43 @@ public class GameBehavior : MonoBehaviour
             Debug.LogFormat("Lives: {0}", _playerHP);
         }
     }
-
-    void RestartLevel()
+    
+    void Start()
     {
-        SceneManager.LoadScene(0);
-        Time.timeScale = 1.0f;
+        Initialize();
+        InventoryList<string> inventoryList = new
+            InventoryList<string>();
     }
+    
+    public void Initialize()
+    {
+        _state = "Manager Initialized...";
+        _state.FancyDebug();
+        // said "fancey" in textbook, typo :0
+        debug(_state);
+        LogWithDelegate(debug);
+
+        GameObject player = GameObject.Find("Player");
+        PlayerBehavior playerBehavior =
+            player.GetComponent<PlayerBehavior>();
+        playerBehavior.playerJump += HandlePlayerJump;
+    }
+
+    public void HandlePlayerJump()
+    {
+        debug("Player has jumped...");
+    }
+
+    public static void Print(string newText)
+    {
+        Debug.Log(newText);
+    }
+
+    public void LogWithDelegate(DebugDelegate del)
+    {
+        del("Delegating the debug task...");
+    }
+
 
     void OnGUI()
     {
@@ -71,7 +112,7 @@ public class GameBehavior : MonoBehaviour
             if (GUI.Button(new Rect(Screen.width / 2 - 100,
                 Screen.height / 2 - 50, 200, 100), "YOU WON!"))
             {
-                RestartLevel();
+                Utilities.RestartLevel(0);
             }
         }
 
@@ -80,8 +121,32 @@ public class GameBehavior : MonoBehaviour
             if (GUI.Button(new Rect(Screen.width / 2 - 100,
                 Screen.height / 2 - 50, 200, 100), "You lost..."))
             {
-                RestartLevel();
+                try
+                {
+                    Utilities.RestartLevel(-1);
+                    debug("Level restarted successfully...");
+                }
+
+                catch (System.ArgumentException e)
+                {
+                    Utilities.RestartLevel(0);
+                    debug("Reverting to scene 0: " + e.ToString());
+                }
+
+                finally
+                {
+                    debug("Restart handled...");
+                }
             }
         }
+    }
+
+    public void PrintLootReport()
+    {
+        var currentItem = lootStack.Pop();
+        var nextItem = lootStack.Peek();
+        // added semicolons, textbook did not
+        Debug.LogFormat("You got a {0}! You've got a good chance of finding a { 1}next!", currentItem, nextItem);
+        Debug.LogFormat("There are {0} random loot items waiting for you!", lootStack.Count);
     }
 }
